@@ -7,11 +7,14 @@ using UnityEngine;
 public class BoatController : MonoBehaviour
 {
 
+    public static BoatController player;
+
     private Rigidbody rb;
     private LineRenderer lineRenderer;
     public List<Boat> boatsInTow = new List<Boat>();
     public float dragLength;
     public float speed;
+    public float forceIncreaseFac;
     public float currentForce;
     public float maxSpeed;
     public float turnSpeed;
@@ -26,6 +29,7 @@ public class BoatController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        player = this;
         rb = GetComponent<Rigidbody>();
         lineRenderer = GetComponent<LineRenderer>();
     }
@@ -33,7 +37,7 @@ public class BoatController : MonoBehaviour
     void Update () {
 
         foreach (Boat boat in FindObjectsOfType<Boat>()) {
-            boat.DisableHighlight();
+            if (boat != null && boat.gameObject.activeInHierarchy) boat.DisableHighlight();
         }
 
         cameraTarget.zoom = 1 + (boatsInTow.Count * zoomAmount);
@@ -66,6 +70,7 @@ public class BoatController : MonoBehaviour
                     if (hit.rigidbody != null && !hit.rigidbody.isKinematic)
                     {
                         draggingBoat = hit.rigidbody;
+                        draggingBoat.transform.parent = null;
                     }
                 }
             }
@@ -87,7 +92,7 @@ public class BoatController : MonoBehaviour
             draggingBoat = null;
         }
 
-        currentForce = boatsInTow.Count == 0 ? speed : speed * boatsInTow.Count;
+        currentForce = boatsInTow.Count == 0 ? speed : speed + (boatsInTow.Count * speed * forceIncreaseFac);
 
         if (Mathf.Abs(Input.GetAxisRaw("Forward")) > 0) {
             if (rb.velocity.magnitude < maxSpeed)
