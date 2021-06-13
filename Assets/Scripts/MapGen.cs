@@ -9,17 +9,21 @@ public class MapGen : MonoBehaviour
     public GameObject[] buildings;
     public GameObject[] boats;
     public GameObject water;
-    public GameObject[] signeage;
-    public GameObject[] debris;
+    public GameObject[] smallObstacles;
+    public GameObject shark;
+    public GameObject food;
 
+    public float sharkFoodRadius;
     public float buildingSeed;
     public float boatSeed;
     public float sharkSeed;
     public float smallObstacleSeed;
+    public float foodSeed;
     public float buildingNoiseScale;
     public float boatNoiseScale;
     public float sharkNoiseScale;
     public float smallObstacleNoiseScale;
+    public float foodNoiseScale;
     [Range(0,1)]
     public float buildingThreshold;
     [Range(0,1)]
@@ -28,6 +32,8 @@ public class MapGen : MonoBehaviour
     public float sharkThreshold;
     [Range(0,1)]
     public float smallObstacleThreshold;
+    [Range(0,1)]
+    public float foodThreshold;
     [Min(1)]
     public float buildingSpacing;
     public float chunkSize;
@@ -66,12 +72,14 @@ public class MapGen : MonoBehaviour
             }
         }
 
+        bool spawnGen = generatedChunks.Count == 0;
+
         //Debug.Log("ChunkX: " + chunkX + ", ChumkY: " + chunkY + " (" + focus.position.x + "," + focus.position.z + ")");
         for (int i = -chunkGenArea + chunkX; i < chunkGenArea + chunkX; i++) {
             for (int j = -chunkGenArea + chunkY; j < chunkGenArea + chunkY; j++) {
                 if (!ChunkIsGenerated(i, j)) {
                     //Debug.Log("Generating chunk " + i + "," + j);
-                    GenerateChunk(i, j);
+                    GenerateChunk(i, j, spawnGen);
                 }
             }
         }
@@ -86,7 +94,7 @@ public class MapGen : MonoBehaviour
         return false;
     }
 
-    void GenerateChunk (int x, int y) {
+    void GenerateChunk (int x, int y, bool spawnGen) {
         GameObject parentObject = new GameObject("Chunk " + x + "," + y);
         parentObject.transform.position = new Vector3(x * chunkSize, 0, y * chunkSize);
         generatedChunks.Add(new Chunk(x, y, parentObject));
@@ -99,12 +107,32 @@ public class MapGen : MonoBehaviour
                 if (buildingNoiseVal > buildingThreshold) {
                     //Debug.Log("Noise val: " + noiseVal);
                     GameObject building = buildings[Random.Range(0, buildings.Length)];
-                    GameObject instance = Instantiate(building, new Vector3(worldX, 0, worldZ), Quaternion.Euler( 0, Random.Range( 0, 4 ) * 90, 0 ), parentObject.transform);
+                    GameObject instance = Instantiate(building, new Vector3(worldX, 0, worldZ), Quaternion.Euler( -90, Random.Range( 0, 4 ) * 90, 0 ), parentObject.transform);
                 } else {
                     float boatNoiseVal = NoiseVal(x, y, i, j, boatNoiseScale, boatSeed);
                     if (boatNoiseVal > boatThreshold) {
                         GameObject boat = boats[Random.Range(0, boats.Length)];
                         GameObject instance = Instantiate(boat, new Vector3(worldX, 0, worldZ), Quaternion.Euler( 0, Random.Range( 0, 359 ), 0 ), parentObject.transform);
+                    } else {
+                        float foodNoiseVal = NoiseVal(x, y, i, j, foodNoiseScale, foodSeed);
+                        if (foodNoiseVal > foodThreshold) {
+                            GameObject instance = Instantiate(food, new Vector3(worldX, 0, worldZ), Quaternion.Euler( 0, Random.Range( 0, 359 ), 0 ), parentObject.transform);
+                            if (!spawnGen || Vector3.Distance(focus.position, new Vector3(worldX, 0, worldZ)) > sharkFoodRadius * 2) {
+                                int numSharks = Random.Range((int)2, (int)6);
+                                for (int k = 0; k < numSharks; k++) {
+                                    float sharkX = Random.Range(worldX - sharkFoodRadius, worldX + sharkFoodRadius);
+                                    float sharkZ = Random.Range(worldZ - sharkFoodRadius, worldZ + sharkFoodRadius);
+                                    Vector3 sharkPos = new Vector3(sharkX, 0, sharkZ);
+                                    GameObject sharkInstance = Instantiate(shark, sharkPos, Quaternion.Euler( 0, Random.Range( 0, 359 ), 0 ));
+                                }
+                            }
+                        } else {
+                            float smallObstacleNoiseVal = NoiseVal(x, y, i, j, smallObstacleNoiseScale, smallObstacleSeed);
+                            if (smallObstacleNoiseVal > smallObstacleThreshold) {
+                                GameObject smallObstacle = smallObstacles[Random.Range(0, smallObstacles.Length)];
+                                GameObject instance = Instantiate(smallObstacle, new Vector3(worldX, -0.5f, worldZ), Quaternion.Euler( -90, Random.Range( 0, 359 ), 0 ), parentObject.transform);
+                            }
+                        }
                     }
                 }
             }

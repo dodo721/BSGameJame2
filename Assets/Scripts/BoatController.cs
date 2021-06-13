@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(LineRenderer))]
@@ -8,6 +9,10 @@ public class BoatController : MonoBehaviour
 {
 
     public static BoatController player;
+
+    public bool GAMEOVER;
+    public bool WON;
+
 
     private Rigidbody rb;
     private LineRenderer lineRenderer;
@@ -25,6 +30,12 @@ public class BoatController : MonoBehaviour
     public float dragStrength;
     public float zoomAmount;
     public PosOnlyParent cameraTarget;
+    public HungerBar hungerBar;
+    public float hunger;
+    public float hungerIncrease;
+
+    public GameObject credits;
+    public Text score;
 
     // Start is called before the first frame update
     void Start()
@@ -35,6 +46,15 @@ public class BoatController : MonoBehaviour
     }
 
     void Update () {
+
+        hunger += hungerIncrease * Time.deltaTime;
+        hungerBar.SetHunger(hunger);
+
+        if (hunger >= 1) {
+            GameOver();
+        }
+
+        //if (boatsInTow.Count == 0 && Time.time > 2) GameOver();
 
         foreach (Boat boat in FindObjectsOfType<Boat>()) {
             if (boat != null && boat.gameObject.activeInHierarchy) boat.DisableHighlight();
@@ -137,6 +157,12 @@ public class BoatController : MonoBehaviour
         } else {
             lineRenderer.enabled = false;
         }
+    }
+
+    void GameOver () {
+        credits.SetActive(true);
+        score.text = boatsInTow.Count.ToString();
+        this.enabled = false;
     }
 
     // Update is called once per frame

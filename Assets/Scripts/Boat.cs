@@ -22,6 +22,13 @@ public class Boat : MonoBehaviour
             this.lineRenderer = lineRenderer;
             this.connectedTo = connectedTo;
         }
+        public void Disconnect (Boat boat) {
+            Destroy(joint);
+            lineRenderer.enabled = false;
+            //Destroy(lineRenderer.gameObject);
+            connectedTo.inTow.Remove(boat);
+            connectedTo = null;
+        }
     }
     public List<Attachment> attachments = new List<Attachment>();
     public GameObject lineRendererPrefab;
@@ -34,6 +41,7 @@ public class Boat : MonoBehaviour
     public float c;
 
     private Outline outline;
+    public Animator animator;
 
     // Start is called before the first frame update
     void Start()
@@ -68,7 +76,7 @@ public class Boat : MonoBehaviour
                     attachment.lineRenderer.positionCount = ropeDensity;
                     attachment.lineRenderer.SetPositions(points);
                 } else {
-                    attachment.lineRenderer.enabled = false;
+                    if (attachment.lineRenderer != null) attachment.lineRenderer.enabled = false;
                 }
             }
         }
@@ -96,6 +104,23 @@ public class Boat : MonoBehaviour
         joint.connectedAnchor = Vector3.zero;
     }
 
+    public void Sink () {
+        foreach (Attachment attachment in attachments) {
+            attachment.Disconnect(this);
+        }
+        foreach (Boat boat in inTow) {
+            foreach (Attachment attachment in boat.attachments) {
+                if (attachment.connectedTo == this) attachment.Disconnect(this);
+            }
+        }
+        animator.SetBool("Sunk", true);
+        gameObject.tag = "Untagged";
+        if (IsConnectedToPlayer()) {
+            BoatController.player.boatsInTow = BoatController.player.GetComponent<Boat>().GetAllConnectedBoats();
+        }
+        Destroy(this);
+    }
+
     public bool IsConnectedToBoat (Boat other) {
         foreach(Attachment attachment in attachments) {
             if (attachment.connectedTo == other) return true;
@@ -119,6 +144,20 @@ public class Boat : MonoBehaviour
         return false;
     }
 
+    public List<Boat> GetAllConnectedBoats () {
+        List<Boat> done = new List<Boat>();
+        ConnectedBoatSearch(this, done);
+        return done;
+    }
+
+    private void ConnectedBoatSearch (Boat current, List<Boat> done) {
+        if (done.Contains(current)) return;
+        done.Add(current);
+        foreach(Attachment attachment in current.attachments) {
+            ConnectedBoatSearch(attachment.connectedTo, done);
+        }
+    }
+
     void FixedUpdate () {
         
     }
@@ -134,6 +173,6 @@ public class Boat : MonoBehaviour
     }
 
     public void DisableHighlight () {
-        outline.enabled = false;
+        if (outline != null) outline.enabled = false;
     }
 }
